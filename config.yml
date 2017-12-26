@@ -1,0 +1,8 @@
+db:
+  host: localhost
+  database: vl
+  username: vl
+  password: P@ssw0rd
+
+general:
+  secret: v3rY_57r0nG+53Cr37_-_=
