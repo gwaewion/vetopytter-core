@@ -1,8 +1,8 @@
 db:
-  host: localhost
-  database: vl
-  username: vl
-  password: P@ssw0rd
+  host: CHANGE_ME
+  database: CHANGE_ME
+  username: CHANGE_ME
+  password: CHANGE_ME
 
 general:
   secret: v3rY_57r0nG+53Cr37_-_=
