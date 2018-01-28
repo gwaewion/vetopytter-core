@@ -15,6 +15,7 @@ import base64
 import MongoDBTalker
 from Entities import Config, User
 
+
 apiVer = '/api/1.0'
 
 app = flask.Flask(__name__)
@@ -67,13 +68,13 @@ def isCredentialsValid():
 def makeJWT():
 	userId = str(db.getUser(flask.request.get_json().get('username')).get('_id'))
 	expTime = str(datetime.datetime.now() + datetime.timedelta(seconds = 3600))
-	return jwt.encode({'userId': userId, 'expTime': expTime}, cfg.getSecret(), algorithm = 'HS256')
+	return jwt.encode({'userId': userId, 'expTime': expTime}, cfg.getJWTSecret(), algorithm = 'HS256')
 
 def JWTUserInnerCheck(encryptedToken):
 	result = {'result': False, 'username': None}
 
 	try:
-		decryptedToken = jwt.decode(encryptedToken, cfg.getSecret(), algorithms=['HS256'])
+		decryptedToken = jwt.decode(encryptedToken, cfg.getJWTSecret(), algorithms=['HS256'])
 		# print(decryptedToken)
 		if isinstance(decryptedToken, dict):
 			expTime = decryptedToken.get('expTime')
@@ -126,7 +127,7 @@ def getExpTime():
 	for cookie in cookies:
 		if '_tt' in cookie:
 			encryptedToken = cookie.split('=')[1]
-			decryptedToken = jwt.decode(encryptedToken, cfg.getSecret(), algorithms=['HS256'])
+			decryptedToken = jwt.decode(encryptedToken, cfg.getJWTSecret(), algorithms=['HS256'])
 			return decryptedToken.get('expTime')
 
 ### routing
@@ -142,7 +143,7 @@ def getExpTime():
 # 	else:
 # 		return makeResponse(450, {'error': 'wrong JWT'})
 
-@app.route('/auth', methods = ['POST'])
+@app.route(apiVer + '/auth', methods = ['POST'])
 def auth():
 	# try:
 		if isCredentialsValid():
@@ -153,19 +154,31 @@ def auth():
 	# except Exception:
 	# 	return makeResponse(200, {'error': 'Can\'t authenticate'})
 
-@app.route('/')
-def root():
+@app.route(apiVer + '/checkJWT')
+def checkJWT():
 	if isJWTValid().get('result'):
-		return app.send_static_file('someStuff.html')
-	else:
-		return app.send_static_file('index.html')
-
-@app.route('/someStuff')
-def someStuff():
-	if isJWTValid().get('result'):
-		return app.send_static_file('someStuff.html')
+		# print(db.getAllRecords())
+		return makeResponse(200, {'result': 'JWT is valid'})
 	else:
 		return makeResponse(450, {'error': 'wrong JWT'})
+
+@app.route(apiVer + '/checkVP')
+def checkVP():
+		return makeResponse(200, {'result': 'VP is alive'})
+
+# @app.route('/')
+# def root():
+# 	if isJWTValid().get('result'):
+# 		return app.send_static_file('someStuff.html')
+# 	else:
+# 		return app.send_static_file('index.html')
+
+# @app.route('/someStuff')
+# def someStuff():
+# 	if isJWTValid().get('result'):
+# 		return app.send_static_file('someStuff.html')
+# 	else:
+# 		return makeResponse(450, {'error': 'wrong JWT'})
 
 @app.route(apiVer + '/show/record/all')
 def getAllRecords():

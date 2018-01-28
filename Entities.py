@@ -1,9 +1,7 @@
 import datetime
-
 import yaml
-
 import PassGen
-
+from cryptography.fernet import Fernet
 
 class Entity():
 	def __eq__(self, otherObject):
@@ -172,8 +170,8 @@ class Config():
 			self.__dbName = config.get('db').get('database')
 			self.__dbUser = config.get('db').get('username')
 			self.__dbPass = config.get('db').get('password')
-
-			self.__secret = config.get('general').get('secret')
+			self.__jwtSecret = config.get('general').get('jwtSecret')
+			self.__salt = config.get('general').get('salt')
 
 	def getDbHost(self):
 		return self.__dbHost
@@ -187,8 +185,20 @@ class Config():
 	def getDbPass(self):
 		return self.__dbPass
 
-	def getSecret(self):
-		return self.__secret
+	def getJWTSecret(self):
+		return self.__jwtSecret
+
+	def getSalt(self):
+		if self.__salt != "":
+			return self.__salt
+		else:
+			raise Exception("salt not set.")
+
+	def setSalt(self, salt):
+		if self.__salt == "":
+			self.__salt = Fernet.generate_key()
+		else:
+			raise Exception("salt already set.")
 
 
 # class Session():

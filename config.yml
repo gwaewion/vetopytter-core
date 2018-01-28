@@ -1,8 +1,9 @@
 db:
-  host: CHANGE_ME
-  database: CHANGE_ME
-  username: CHANGE_ME
-  password: CHANGE_ME
+  host: 10.0.2.15
+  database: vl
+  username: vl
+  password: vl_password
 
 general:
-  secret: v3rY_57r0nG+53Cr37_-_=
+  jwtSecret: v3rY_57r0nG+53Cr37_-_=
+  salt: tj9GFPeqwGfwJq1eS0ozb8CbIxy0LDXlBywfw3P0UyY=

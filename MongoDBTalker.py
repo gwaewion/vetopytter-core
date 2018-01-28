@@ -5,7 +5,8 @@ import datetime
 # import urllib.parse
 import MD5Crypter
 import PassGen
-from Entities import Catalog, Group, Record, User
+from Entities import Catalog, Group, Record, User, Config
+from cryptography.fernet import Fernet
 
 #todo need to return only groups in which user are take part OR deny getting all(users, groups, catalogs, records) for all users, only to admins
 #todo need mace code more OO and use entity like gropObject, userObject instead use streight groupName, username etc. 
@@ -25,6 +26,8 @@ class MongoDBTalker:
 		self.password = password
 		self.dbName = dbName
 		self.serverPort = serverPort
+
+		self.cfg = Config('config.yml')
 
 		self.makeConnection()
 
@@ -104,6 +107,13 @@ class MongoDBTalker:
 		return result
 
 
+	def encryptPassword(self, plainTextPassword):
+		crypter = Fernet(self.cfg.getSalt().encode())
+		return bytes.decode(crypter.encrypt(str.encode(plainTextPassword)))
+
+	def decryptPassword(self, encryptedPassword):
+		crypter = Fernet(self.cfg.getSalt().encode())
+		return bytes.decode(crypter.decrypt(str.encode(encryptedPassword)))
 
 	# def __isUserInGroup(self, userValue, groupValue):
 	# 	result = False
@@ -182,7 +192,7 @@ class MongoDBTalker:
 	# 	else:
 	# 		raise Exception('catalog "' + catalogName + '" already exists.')
 
-	def createRecord(self, recordName, serverAddress, username, password, url='', notes='', modificationDate=''):
+	def createRecord(self, recordName, serverAddress, username, password, url='', notes=''):
 		# if self.__isCatalogExists(catalogName) == True:
 			if self.isRecordExists(recordName) == False:
 				# self.records.insert_one({'name': recordName, 'serverAddress': serverAddress, 'username': username, 'password': password, 'catalog': self.getCatalog(catalogName), 'url': url, 'notes': notes})
@@ -190,7 +200,7 @@ class MongoDBTalker:
 					'name': recordName, 
 					'serverAddress': serverAddress, 
 					'username': username, 
-					'password': password, 
+					'password': self.encryptPassword(password), 
 					'url': url, 
 					'notes': notes, 
 					'creationDate': datetime.datetime.utcnow(), 
@@ -240,8 +250,11 @@ class MongoDBTalker:
 
 	def getRecord(self, value): #now more OO 
 		result = self.records.find_one(self.__oIH(value))
+
+		tempResult = result.copy()
+		tempResult['password'] = self.decryptPassword(result.get('password'))
 		
-		return self._verifyResult('record', result, value)
+		return self._verifyResult('record', tempResult, value)
 
 		# record = self._verifyResult('record', self.groups.find_one(self.__oIH(value)), value)
 
@@ -638,46 +651,36 @@ class MongoDBTalker:
 			'localhost1', 
 			'testUser1', 
 			'testPassword1', 
-			datetime.datetime.utcnow(), 
 			url='https://localhost1/', 
-			notes='some test notes here1', 
-			modificationDate=datetime.datetime.utcnow())
+			notes='some test notes here1')
 		self.createRecord(
 			'testRecord2', 
 			'localhost2', 
 			'testUser2', 
 			'testPassword2', 
-			datetime.datetime.utcnow(), 
 			url='https://localhost2/', 
-			notes='some test notes here2', 
-			modificationDate=datetime.datetime.utcnow())
+			notes='some test notes here2')
 		self.createRecord(
 			'testRecord3', 
 			'localhost3', 
 			'testUser3', 
 			'testPassword3', 
-			datetime.datetime.utcnow(), 
 			url='https://localhost/3', 
-			notes='some test notes here3', 
-			modificationDate=datetime.datetime.utcnow())
+			notes='some test notes here3')
 		self.createRecord(
 			'testRecord4', 
 			'localhost4', 
 			'testUser4', 
 			'testPassword4', 
-			datetime.datetime.utcnow(), 
 			url='https://localhost/4', 
-			notes='some test notes here4', 
-			modificationDate=datetime.datetime.utcnow())
+			notes='some test notes here4')
 		self.createRecord(
 			'testRecord5', 
 			'localhost5', 
 			'testUser5', 
 			'testPassword5', 
-			datetime.datetime.utcnow(), 
 			url='https://localhost/5', 
-			notes='some test notes here4', 
-			modificationDate=datetime.datetime.utcnow())
+			notes='some test notes here4')
 
 	### Test methods ###
 
