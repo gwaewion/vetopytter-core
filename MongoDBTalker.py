@@ -357,9 +357,15 @@ class MongoDBTalker:
 
 	### Update/replace section ###
 
-	def updateRecord(self, id, **kwargs):
+	def updateRecord(self, id, **kwargs): #need add encryption of password 
 		if self.isRecordExists(id):
-			result = self.records.update_one({'_id': id} , {'$set': kwargs})
+			result = {}
+			if 'password' in kwargs:
+				updatedKwargs = kwargs.copy()
+				updatedKwargs['password'] = self.encryptPassword(kwargs['password'])
+				result = self.records.update_one({'_id': id} , {'$set': updatedKwargs})
+			else:
+				result = self.records.update_one({'_id': id} , {'$set': kwargs})
 			if result.modified_count != 1:
 				raise Exception('can\'t update record ' + id + '.')
 		else:

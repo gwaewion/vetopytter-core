@@ -232,7 +232,7 @@ def editRecord():
 			request = flask.request.get_json()
 			db.updateRecord(
 				bson.objectid.ObjectId(request.get('recordId')), 
-				ame = request.get('recordName'), 
+				name = request.get('recordName'), 
 				serverAddress = request.get('serverAddress'), 
 				username = request.get('username'), 
 				password = request.get('password'), 
