@@ -9,13 +9,11 @@ from Entities import Catalog, Group, Record, User, Config
 from cryptography.fernet import Fernet
 
 #todo need to return only groups in which user are take part OR deny getting all(users, groups, catalogs, records) for all users, only to admins
-#todo need mace code more OO and use entity like gropObject, userObject instead use streight groupName, username etc. 
-#todo need to add check for quantity of record's catalogs: only one must survive
+#todo need make code more OO and use entity like groupObject, userObject instead use streight groupName, username etc. 
 #todo make limitation for creating names for user, group, catalog or record with special characters
 #todo REALLY need exception handlers
-#todo add email to User
 #todo add favicon
-#todo add time of creation and time f modification of record
+#todo add createdBy and modificatedBy for records
 #todo add import from KeePass
 
 class MongoDBTalker:
@@ -56,21 +54,119 @@ class MongoDBTalker:
 
 	### Some internal cool stuff, you know ###
 
-	def __oIH(self, identifier): #__objectIdentifierHandler
-		if isinstance(identifier, str):
-			return {'name': identifier}
-		elif isinstance(identifier, bson.ObjectId):
-			return {'_id': identifier}
-		else:
-			raise IllegalArgumentTypeException(identifier)
+
 
 	### Various checks section ###
 
-	def isCatalogExists(self, value):
-		return True if self.catalogs.find_one(self.__oIH(value)) != None else False
+	def isObjectExists(self, objectType, objectProperty, propertyValue):
+		if objectType != 'group' and objectType != 'user' and objectType != 'catalog' and objectType != 'record':
+			raise IllegalArgumentException(objectType)
+		elif objectProperty != 'id' and objectProperty != 'name' and objectProperty != 'oid':
+			raise IllegalArgumentException(objectProperty)
+		else:
+			if objectProperty == 'id':
+				# if objectType == 'record':
+				# 	for catalog in self.catalogs.find({}):
+				# 		for record in catalog.get('records'):
+				# 			return True if bson.objectid.ObjectId(propertyValue) == record.get('_id') != None else False
+				# else:
+				check = 'self.' + objectType + 's.find_one({\'_id\': bson.objectid.ObjectId(propertyValue)})'
+				return True if eval(check) != None else False
+			elif objectProperty == 'name':
+				# if objectType == 'record':
+				# 	for catalog in self.catalogs.find({}):
+				# 		for record in catalog.get('records'):
+				# 			return True if propertyValue in record.get('name') != None else False
+				# else:
+				check = 'self.' + objectType + 's.find_one({\'name\': propertyValue})'
+				return True if eval(check) != None else False
+			elif objectProperty == 'oid':
+				# if objectType == 'record':
+				# 	for catalog in self.catalogs.find({}):
+				# 		for record in catalog.get('records'):
+				# 			return True if propertyValue == record != None else False
+				# else:
+				check = 'self.' + objectType + 's.find_one(propertyValue)'
+				return True if eval(check) != None else False
 
-	def isGroupExists(self, value):
-		return True if self.groups.find_one(self.__oIH(value)) != None else False
+	def getObject(self, objectType, objectProperty, propertyValue):
+		if objectType != 'group' and objectType != 'user' and objectType != 'catalog' and objectType != 'record':
+			raise IllegalArgumentException(objectType)
+		elif objectProperty != 'id' and objectProperty != 'name' and objectProperty != 'oid':
+			raise IllegalArgumentException(objectProperty)
+		else:
+			if objectProperty == 'id':
+				# if objectType == 'record':
+				# 	result = ''
+				# 	for catalog in self.catalogs.find({}):
+				# 		for record in catalog.get('records'):
+				# 			if record.get('_id') == bson.objectid.ObjectId(propertyValue):
+				# 				result = record
+				# 	if result is not None and len(result) > 0:
+				# 		return result
+				# 	else:
+				# 		raise NoSuchRecordException(propertyValue)
+				# else:
+				check = 'self.' + objectType + 's.find_one({\'_id\': bson.objectid.ObjectId(propertyValue)})'
+				result = eval(check)
+				if result is not None and len(result) > 0:
+					return result
+				else:
+					raise NoSuchObjectException(objectType, objectProperty, propertyValue)
+			elif objectProperty == 'name':
+				# if objectType == 'record':
+				# 	result = ''
+				# 	for catalog in self.catalogs.find({}):
+				# 		for record in catalog.get('records'):
+				# 			if record.get('name') == propertyValue:
+				# 				result = record
+				# 	if result is not None and len(result) > 0:
+				# 		return result
+				# 	else:
+				# 		raise NoSuchRecordException(propertyValue)
+				# else:
+				check = 'self.' + objectType + 's.find_one({\'name\': propertyValue})'
+				result = eval(check)
+				if result is not None and len(result) > 0:
+					return result
+				else:
+					raise NoSuchObjectException(objectType, objectProperty, propertyValue)
+			elif objectProperty == 'oid':
+				# if objectType == 'record':
+				# 	result = ''
+				# 	for catalog in self.catalogs.find({}):
+				# 		for record in catalog.get('records'):
+				# 			if record.get('_id') == propertyValue:
+				# 				result = record
+				# 	if result is not None and len(result) > 0:
+				# 		return result
+				# 	else:
+				# 		raise NoSuchRecordException(propertyValue)
+				# else:
+				check = 'self.' + objectType + 's.find_one(propertyValue)'
+				result = eval(check)
+				if result is not None and len(result) > 0:
+					return result
+				else:
+					raise NoSuchObjectException(objectType, objectProperty, propertyValue)
+
+	# def isCatalogExists(self, **kwargs):
+	# 	if len(kwargs) != 1:
+	# 		raise IllegalArgumentNumberException(1, len(kwargs))
+	# 	elif not 'id' in kwargs.keys() or not 'name' in kwargs.keys():
+	# 		raise IllegalArgumentTypeException(kwargs.keys())
+	# 	else:
+	# 		if 'id' in kwargs.keys():
+	# 			for value in kwargs.values():
+	# 				return True if self.catalogs.find_one({'_id': value}) != None else False
+	# 		elif 'name' in kwargs.keys():
+	# 			for value in kwargs.values():
+	# 				return True if self.catalogs.find_one({'name': value}) != None else False
+
+	# 	return True if self.catalogs.find_one({'_id': catalogID}) != None else False
+
+	# def isGroupExists(self, value):
+	# 	return True if self.groups.find_one(self.__oIH(value)) != None else False
 
 	# def isRecordExists(self, value, catalogName): #now more OO
 	# 	result = False
@@ -80,16 +176,16 @@ class MongoDBTalker:
 
 	# 	return result
 
-	def isRecordExists(self, value):
-		result = False
+	# def isRecordExists(self, value):
+	# 	result = False
 
-		if self.records.find_one(self.__oIH(value)) != None:
-			result = True
+	# 	if self.records.find_one(self.__oIH(value)) != None:
+	# 		result = True
 
-		return result
+	# 	return result
 
-	def isUserExists(self, value):
-		return True if self.users.find_one(self.__oIH(value)) != None else False
+	# def isUserExists(self, value):
+	# 	return True if self.users.find_one(self.__oIH(value)) != None else False
 
 	def encryptPassword(self, plainTextPassword):
 		crypter = Fernet(self.cfg.getSalt().encode())
@@ -99,28 +195,17 @@ class MongoDBTalker:
 		crypter = Fernet(self.cfg.getSalt().encode())
 		return bytes.decode(crypter.decrypt(str.encode(encryptedPassword)))
 
-	def isUserInGroup(self, groupName, username):
-		result = False
+	def isUserInGroup(self, groupOid, userOid):
+		return True if self.users.find({'_id': userOid, 'groups': groupOid}).count() == 1 else False
 
-		group = self.getGroup(groupName)
-		user = self.getUser(username)
+	def isGroupIsEmpty(self, groupOid):
+		return True if self.isObjectExists('group', 'oid', groupOid) and self.users.find({'groups': groupOid}).count() == 0 else False
 
-		userGroups = self.getUserGroups(username)
-			
-		for group in userGroups:
-			if self.groups.find_one({'name': group.get('name')}).get('name') == groupName:
-				result = True
+	def isLastGroupForUser(self, userOid):
+		return True if len(self.users.find_one({'_id': userOid}).get('groups')) == 1 else False
 
-		return result
-
-	def isGroupIsEmpty(self, groupName):
-		return True if self.isGroupExists(groupName) and self.users.find({'groups': self.getGroup(groupName).get('_id')}).count() == 0 else False
-
-	def isLastGroupForUser(self, username):
-		return True if len(self.users.find_one({'name': username}).get('groups')) == 1 else False
-
-	def isCatalogIsEmpty(self, catalogName):
-		return True if self.isCatalogExists(catalogName) and len(self.catalogs.find_one({'name': catalogName}).get('records')) == 0 else False
+	def isCatalogIsEmpty(self, catalogOid):
+		return True if self.isObjectExists('catalog', 'oid', catalogOid) and len(self.catalogs.find_one({'_id': catalogOid}).get('records')) == 0 else False
 
 	# def __isGroupHaveAccessToCatalog(self, groupName, catalogName):
 	# 	result = False
@@ -137,43 +222,38 @@ class MongoDBTalker:
 	### Create section ###  ??? should i add return value to this functions ???
 
 	def createGroup(self, groupName):
-		if not self.isGroupExists(groupName):
+		if not self.isObjectExists('group', 'name', groupName):
 			self.groups.insert_one({'name': groupName})
 		else:
 			raise GroupExistsException(groupName)
 
 	def createUser(self, username, password, description, email, groupName):
-		if self.isGroupExists(groupName):
-			if not self.isUserExists(username):
-				# if self.__isGroupExists(groupName):
-					# self.users.insert_one({'name': username, 'password': MD5Crypter.MD5Crypter().getHash(password), 'groups':[self.getGroup(groupName)], 'apiToken': self.createApiToken(), 'temporalToken': ''})
-					self.users.insert_one({
+		if self.isObjectExists('group', 'name', groupName):
+			if not self.isObjectExists('user', 'name', username):
+					result = self.users.insert_one({
 						'name': username, 
 						'password': self.makePasswordHash(password), 
 						'description': description, 
 						'email': email, 
 						'groups': [], 
 						'apiToken': self.createApiToken()})
-					self.addUserToGroup(groupName, username)
-				# else:
-				# 	raise NoSuchGroupException(groupName)	
+					self.addUserToGroup(self.getObject('group', 'name', groupName).get('_id'), result.inserted_id)
 			else:
 				raise Exception('can\'t create user. User "' + username + '" already exists.')
 		else:
 			raise NoSuchGroupException(groupName)
 
 	def createCatalog(self, catalogName, parentCatalog):
-		if not self.isCatalogExists(catalogName):
+		if not self.isObjectExists('catalog', 'name', catalogName):
 			self.catalogs.insert_one({'name': catalogName, 'catalogs': [], 'records': [], 'groups': []})
-			self.catalogs.update_one({'name': parentCatalog}, {'$push': {'catalogs': self.getCatalog(catalogName).get('_id')}})
+			self.catalogs.update_one({'name': parentCatalog}, {'$push': {'catalogs': self.catalogs.find_one({'name': catalogName}).get('_id')}})
 		else:
-			raise Exception('catalog "' + catalogName + '" already exists.')
+			raise Exception('can\'t create catalog. Catalog "' + catalogName + '" already exists.')
 
-	def createRecord(self, recordName, serverAddress, username, password, url='', notes=''):
-		# if self.__isCatalogExists(catalogName) == True:
-			if self.isRecordExists(recordName) == False:
-				# self.records.insert_one({'name': recordName, 'serverAddress': serverAddress, 'username': username, 'password': password, 'catalog': self.getCatalog(catalogName), 'url': url, 'notes': notes})
-				self.records.insert_one({
+	def createRecord(self, catalogName, recordName, serverAddress, username, password, url='', notes=''):
+		if self.isObjectExists('catalog', 'name', catalogName):
+			# if not self.isObjectExists('record', 'name', recordName):
+				result = self.records.insert_one({
 					'name': recordName, 
 					'serverAddress': serverAddress, 
 					'username': username, 
@@ -183,43 +263,40 @@ class MongoDBTalker:
 					'creationDate': datetime.datetime.utcnow(), 
 					'modificationDate': datetime.datetime.utcnow()
 					})
-			else:
-				raise Exception('can\'t create record. Record "' + recordName + '" already exists in this group.')	
-		# else:
-		# 	raise NoSuchCatalogException(catalogName)
+				self.addRecordToCatalog(self.getObject('catalog', 'name', catalogName).get('_id'), result.inserted_id)
+			# else:
+			# 	raise Exception('can\'t create record. Record "' + recordName + '" already exists in this catalog.')	
+		else:
+			raise NoSuchCatalogException(catalogName)
 
 	### Read section ###
 
-	def _verifyResult(self, objectType, result, value):
-		if type(result) == dict and len(result) > 0:
-			return result
-		else:
-			if objectType == 'catalog':
-				raise NoSuchCatalogException(value)
-			elif objectType == 'group':
-				raise NoSuchGroupException(value)
-			elif objectType == 'record':
-				raise NoSuchRecordException(value)
-			elif objectType == 'user':
-				raise NoSuchUserException(value)
+	# def getCatalog(self, catalogID):
+	# 	if self.isCatalogExists(catalogID):
+	# 		return self.catalogs.find_one({'_id': catalogID})
+	# 	else:
+	# 		raise NoSuchCatalogException(catalogID)
+		# result = self.catalogs.find_one(self.__oIH(value))
+		# return self._verifyResult('catalog', result, value)
 
-	def getCatalog(self, value):
-		result = self.catalogs.find_one(self.__oIH(value))
-		return self._verifyResult('catalog', result, value)
+	# def getGroup(self, value): 
+	# 	result = self.groups.find_one(self.__oIH(value))
+	# 	return self._verifyResult('group', result, value)
 
-	def getGroup(self, value): 
-		result = self.groups.find_one(self.__oIH(value))
-		return self._verifyResult('group', result, value)
+	# def getRecord(self, recordID):
+	# 	for catalog in self.getAllCatalogs():
+	# 		if not len(catalog.get('records')) == 0:
+	# 			for record in self.getRecordsFromCatalog(catalog):
+	# 				pass
 
-	def getRecord(self, value):
-		result = self.records.find_one(self.__oIH(value))
-		tempResult = result.copy()
-		tempResult['password'] = self.decryptPassword(result.get('password'))
-		return self._verifyResult('record', tempResult, value)
+		# result = self.catalogs.find_one(self.__oIH(value))
+		# tempResult = result.copy()
+		# tempResult['password'] = self.decryptPassword(result.get('password'))
+		# return self._verifyResult('record', tempResult, value)
 
-	def getUser(self, value):
-		result = self.users.find_one(self.__oIH(value))
-		return self._verifyResult('user', result, value)
+	# def getUser(self, value):
+	# 	result = self.users.find_one(self.__oIH(value))
+	# 	return self._verifyResult('user', result, value)
 
 	def getAllGroups(self):
 		allGroups = self.groups.find({})
@@ -228,14 +305,14 @@ class MongoDBTalker:
 			results.append(group)
 		return results
 
-	def getUserGroups(self, value):
-		groupsIdList = self.getUser(value).get('groups')
+	def getUserGroups(self, userOid):
+		groupsOidList = self.getObject('user', 'oid', userOid).get('groups')
 		result = []
-		for id in groupsIdList:
-			result.append(self.getGroup(id))
+		for id in groupsOidList:
+			result.append(self.getObject('group', 'id', id))
 		return result
 
-	def getAllUsers(self): #now more OO
+	def getAllUsers(self):
 		allUsers = self.users.find({})
 		result = []
 		for user in allUsers:
@@ -252,19 +329,11 @@ class MongoDBTalker:
 
 	# 	return results
 
-	# def getUsersFromGroup(self, value): #now more OO
-	# 	results = []
-
-	# 	#it might be like this, but need to think how imploemet this in right way
-	# 	#for user in self.users.find({'groups.name': value})
-
-	# 	group = self.getGroup(value)
-		
-	# 	for user in self.getAllUsers():
-	# 		if group in user.getGroups():
-	# 			results.append(user)
-
-	# 	return results
+	def getGroupUsers(self, groupOid):
+		results = []
+		for user in self.users.find({'groups': groupOid}):
+			results.append(user)
+		return results
 
 	# def getGroupCatalogs(self, value): #now more OO
 	# 	return self.getGroup(value).get('catalogs')
@@ -273,33 +342,20 @@ class MongoDBTalker:
 		rawResults = self.catalogs.find({})
 		results = []
 		for catalog in rawResults:
-			results.append(self.getCatalog(catalog.get('name')))
+			results.append(catalog)
 		return results
 
-	# def getAllCatalogs(self): #now more OO
-	# 	rawResults = self.catalogs.find({})
-	# 	results = []
+	def getRecordsFromCatalog(self, catalogOid):
+		recordsOids = self.getObject('catalog', 'oid', catalogOid).get('records')
+		result = []
+		for recordOid in recordsOids:
+			result.append(self.getObject('record', 'oid', recordOid))
+		return result
 
-	# 	for catalog in rawResults:
-	# 		results.append(self.getCatalog(catalog.get('name')))
+	def getRecordCatalog(self, recordOid):
+		return self.catalogs.find_one({'records': recordOid})
 
-	# 	return results
-
-	# def getRecordsFromCatalog(self, value): #now more OO
-	# 	results = []
-
-	# 	#it might be like this, but need to think how imploemet this in right way
-	# 	#for user in self.users.find({'groups.name': value})
-
-	# 	catalog = self.getCatalog(value)
-
-	# 	for record in self.getAllRecords():
-	# 		if catalog == record.get('catalog'):
-	# 			results.append(record)
-
-	# 	return results
-
-	def getAllRecords(self): #now more OO
+	def getAllRecords(self):
 		rawResults = self.records.find({})
 		results = []
 		for record in rawResults:
@@ -308,19 +364,20 @@ class MongoDBTalker:
 
 	### Update/replace section ###
 
-	def updateRecord(self, id, **kwargs): #need add encryption of password 
-		if self.isRecordExists(id):
+	def updateRecord(self, recordOid, **kwargs):
+		if self.isObjectExists('record', 'oid', recordOid):
 			result = {}
 			if 'password' in kwargs:
+				pass
 				updatedKwargs = kwargs.copy()
 				updatedKwargs['password'] = self.encryptPassword(kwargs['password'])
-				result = self.records.update_one({'_id': id} , {'$set': updatedKwargs})
+				result = self.records.update_one({'_id': recordOid}, {'$set': updatedKwargs})
 			else:
-				result = self.records.update_one({'_id': id} , {'$set': kwargs})
+				result = self.records.update_one({'_id': recordOid}, {'$set': kwargs})
 			if result.modified_count != 1:
-				raise Exception('can\'t update record ' + id + '.')
+				raise Exception('can\'t update record ' + recordOid + '.')
 		else:
-			raise NoSuchRecordException(id)
+			raise NoSuchObjectException('record', 'oid', recordOid)
 
 	# def modifyObject(self, objectType, objectRef, objectProperty, value):
 	# 	if objectType == 'catalog':
@@ -402,24 +459,24 @@ class MongoDBTalker:
 	# 	else:
 	# 		raise Exception('group "' + groupName + '" does not exists.')
 
-	def addUserToGroup(self, groupName, username):
-		if self.isGroupExists(groupName):
-			if self.isUserExists(username):
-				if not self.isUserInGroup(groupName, username):
-					result = self.users.update_one({'name': username}, {'$push': {'groups': self.getGroup(groupName).get('_id')}})
+	def addUserToGroup(self, groupOid, userOid):
+		if self.isObjectExists('group', 'oid', groupOid):
+			if self.isObjectExists('user', 'oid', userOid):
+				if not self.isUserInGroup(groupOid, userOid):
+					result = self.users.update_one({'_id': userOid}, {'$push': {'groups': groupOid}})
 					
 					if result.modified_count != 1:
 						raise Exception('user "' + username + '" has been NOT added to group "' + groupName +'".')
 				else:
 					raise Exception('user "' + username + '" already in group "' + groupName + '".')
 			else:
-				raise NoSuchUserException(username)
+				raise NoSuchObjectException('user', 'oid', userOid)
 		else:
-			raise NoSuchGroupException(groupName)
+			raise NoSuchObjectException('group', 'oid', groupOid)
 
 	def removeUserFromGroup(self, groupName, username):
-		if self.isUserExists(username):
-			if self.isGroupExists(groupName):
+		if self.isObjectExists('user', 'name', username):
+			if self.isObjectExists('group', 'name', groupName):
 				if self.isUserInGroup(groupName, username):
 					if (self.isLastGroupForUser(username) == False): #or (self.isLastGroupForUser(username) == True and inspect.stack()[1].function == ('addGroupAccessToCatalog') or (self.__isLastGroupForUser(username) == True and inspect.stack()[1].function == 'removeGroupAccessToCatalog') or (self.__isLastGroupForUser(username) == True and inspect.stack()[1].function == 'renameGroup')):
 						result = self.users.update_one({'name': username}, {'$pull': {'groups': self.getGroup(groupName).get('_id')}})
@@ -497,10 +554,17 @@ class MongoDBTalker:
 	# def removeRecordFromcatalog(self, recordName, catalogName):
 	# 	pass
 
-	# def addRecordToCatalog(self, recordName, catalogName):
-	# 	pass
+	def addRecordToCatalog(self, catalogOid, recordOid):
+		if self.isObjectExists('catalog', 'oid', catalogOid):
+			if self.isObjectExists('record', 'oid', recordOid):
+				result = self.catalogs.update_one({'_id': catalogOid}, {'$push': {'records': recordOid}})
 
-
+				if result.modified_count != 1:
+					raise Exception('record "' + recordOid + '" has been NOT added to catalog "' + catalogOid + '".')
+			else:
+				NoSuchObjectException('record', 'oid', recordOid)
+		else:
+			raise NoSuchObjectException('catalog', 'oid', catalogOid)
 	### Delete section ###
 
 
@@ -534,16 +598,14 @@ class MongoDBTalker:
 		else:
 			raise Exception('catalog "' + catalogName +'" is not empty or not exists.')
 
-	def deleteRecord(self, value):
-		record = self.__oIH(value)
-
-		if self.isRecordExists(value):
-			result = self.records.delete_one(self.records.find_one(record))
-
+	def deleteRecord(self, recordOid):
+		if self.isObjectExists('record', 'oid', recordOid):
+			result = self.records.delete_one({'_id': recordOid})
+			self.catalogs.update_one(self.getRecordCatalog(recordOid), {'$pull': {'records': recordOid}})
 			if result.deleted_count != 1:
 				raise Exception('record "' + record + '" has been NOT deleted.')
 		else:
-			raise NoSuchRecordException(record)
+			raise NoSuchObjectException('record', 'oid', recordOid)
 
 	### DB init section ###
 
@@ -565,8 +627,11 @@ class MongoDBTalker:
 		self.createUser('user', 'user', 'very regular user', 'user@localhost', 'users')
 
 		self.catalogs.insert_one({'name': 'rootCatalog', 'catalogs': [], 'records': [], 'groups': []})
+		self.createCatalog('testRecords', 'rootCatalog')
+		self.createCatalog('moreTestRecords', 'rootCatalog')
 				
 		self.createRecord(
+			'testRecords',
 			'testRecord1', 
 			'localhost1', 
 			'testUser1', 
@@ -574,6 +639,7 @@ class MongoDBTalker:
 			url='https://localhost1/', 
 			notes='some test notes here1')
 		self.createRecord(
+			'testRecords',
 			'testRecord2', 
 			'localhost2', 
 			'testUser2', 
@@ -581,6 +647,7 @@ class MongoDBTalker:
 			url='https://localhost2/', 
 			notes='some test notes here2')
 		self.createRecord(
+			'testRecords',
 			'testRecord3', 
 			'localhost3', 
 			'testUser3', 
@@ -588,6 +655,7 @@ class MongoDBTalker:
 			url='https://localhost/3', 
 			notes='some test notes here3')
 		self.createRecord(
+			'testRecords',
 			'testRecord4', 
 			'localhost4', 
 			'testUser4', 
@@ -595,6 +663,48 @@ class MongoDBTalker:
 			url='https://localhost/4', 
 			notes='some test notes here4')
 		self.createRecord(
+			'testRecords',
+			'testRecord5', 
+			'localhost5', 
+			'testUser5', 
+			'testPassword5', 
+			url='https://localhost/5', 
+			notes='some test notes here4')
+
+		self.createRecord(
+			'moreTestRecords',
+			'testRecord1', 
+			'localhost1', 
+			'testUser1', 
+			'testPassword1', 
+			url='https://localhost1/', 
+			notes='some test notes here1')
+		self.createRecord(
+			'moreTestRecords',
+			'testRecord2', 
+			'localhost2', 
+			'testUser2', 
+			'testPassword2', 
+			url='https://localhost2/', 
+			notes='some test notes here2')
+		self.createRecord(
+			'moreTestRecords',
+			'testRecord3', 
+			'localhost3', 
+			'testUser3', 
+			'testPassword3', 
+			url='https://localhost/3', 
+			notes='some test notes here3')
+		self.createRecord(
+			'moreTestRecords',
+			'testRecord4', 
+			'localhost4', 
+			'testUser4', 
+			'testPassword4', 
+			url='https://localhost/4', 
+			notes='some test notes here4')
+		self.createRecord(
+			'moreTestRecords',
 			'testRecord5', 
 			'localhost5', 
 			'testUser5', 
@@ -605,9 +715,9 @@ class MongoDBTalker:
 	### Test methods ###
 
 	def clearDB(self):
-		# self.groups.remove()
+		self.groups.remove()
 		self.users.remove()
-		# self.catalogs.remove()
+		self.catalogs.remove()
 		self.records.remove()
 
 	### web methods ###
@@ -674,22 +784,33 @@ class MongoDBTalker:
 	# 	return self.getUser(value).get('temporalToken')
 
 
-
+	def importFromKeePass(self, dictionary):
+		parentCatalog = 'rootCatalog'
+		self.createCatalog(dictionary.get('name'), parentCatalog)
+		if len(dictionary.get('entries')) != 0:
+			for entry in dictionary.get('entries'):
+				self.createRecord(dictionary.get('name'), entry.get('name'), '', entry.get('username'), entry.get('password'), entry.get('url'), entry.get('notes'))
+		if len(dictionary.get('groups')) != 0:
+			print(dictionary.get('groups'))
+			parentCatalog = dictionary.get('name')
+			print(parentCatalog)
+			for nestedGroup in dictionary.get('groups'):
+				self.importFromKeePass(nestedGroup)
 
 	def createApiToken(self):
 		return PassGen.PassGen().generatePassword(64, True, True, True, False)
 
 	def getPasswordHash(self, username): 
-		if self.isUserExists(username):
-			return self.getUser(username).get('password')
+		if self.isObjectExists('user', 'name', username):
+			return self.getObject('user', 'name', username).get('password')
 		else:
-			raise NoSuchUserException(username) 
+			raise NoSuchObjectException('user', 'name', username) 
 
 	def makePasswordHash(self, passphrase):
 		return MD5Crypter.MD5Crypter().getHash(passphrase)
 
 	def validateUser(self, username, password): 
-		return True if self.getPasswordHash(username) == self.makePasswordHash(password) else False;
+		return True if self.getPasswordHash(username) == self.makePasswordHash(password) else False
 
 class NoSuchGroupException(Exception):
 	def __init__(self, groupName):
@@ -711,6 +832,10 @@ class NoSuchCatalogException(Exception):
 	def __init__(self, catalogName):
 		Exception.__init__(self, 'catalog \"{}\" does not exists.'.format(catalogName))
 
+class NoSuchObjectException(Exception):
+	def __init__(self, objectType, objectProperty, propertyValue):
+		Exception.__init__(self, 'object with type \"{}\" and property \"{}\" and property value \"{}\" does not exists.'.format(objectType, objectProperty, propertyValue))
+
 class NoSuchRecordException(Exception):
 	def __init__(self, recordName):
 		Exception.__init__(self, 'record \"{}\" does not exists.'.format(recordName))
@@ -722,3 +847,7 @@ class IllegalArgumentNumberException(Exception):
 class IllegalArgumentTypeException(Exception):
 	def __init__(self, argument):
 		Exception.__init__(self, '{} is unsupported argument type.'.format(type(argument)))
+
+class IllegalArgumentException(Exception):
+	def __init__(self, argument):
+		Exception.__init__(self, '\'{}\' is unsupported argument.'.format(argument))

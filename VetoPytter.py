@@ -14,6 +14,8 @@ import bson.json_util
 import base64
 import MongoDBTalker
 from Entities import Config, User
+import xml.etree.ElementTree as ET
+import io
 
 
 apiVer = '/api/1.0'
@@ -38,6 +40,43 @@ def page_not_found(error):
     return makeResponse(405, {})
 
 ### service methods
+
+def prepareXML(xml):
+	xmlTree = ET.fromstring(xml)
+	return xmlTree.find('Root').find('Group')
+
+def handleXML(rootGroup):
+
+	res = {'uuid': '', 'name': '', 'groups': [], 'entries': []}
+
+	for child in rootGroup.getchildren():
+		if child.tag == 'UUID':
+			res.update({'uuid': child.text})
+		if child.tag == 'Name':
+			res.update({'name': child.text})
+		if child.tag == 'Group':
+			res.get('groups').append(handleXML(child))
+		if child.tag == 'Entry':
+			# res.get('entries').append({'name': child.})
+			entry = {'name': '', 'username': '', 'password': '', 'url': '', 'notes': ''}
+			for childOfChild in child.getchildren():
+				if childOfChild.tag == 'UUID':
+					entry.update({'uuid': childOfChild.text})
+				if childOfChild.tag == 'String':
+					if childOfChild.find('Key').text == 'Title':
+						entry.update({'name': childOfChild.find('Value').text})
+					if childOfChild.find('Key').text == 'UserName':
+						entry.update({'username': childOfChild.find('Value').text})
+					if childOfChild.find('Key').text == 'Password':
+						entry.update({'password': childOfChild.find('Value').text})
+					if childOfChild.find('Key').text == 'URL':
+						entry.update({'url': childOfChild.find('Value').text})
+					if childOfChild.find('Key').text == 'Notes':
+						entry.update({'notes': childOfChild.find('Value').text})
+			res.get('entries').append(entry)
+
+	# return json.dumps(res)
+	return res
 
 def toJSON(payload):
 	return bson.json_util.dumps(payload)
@@ -66,7 +105,7 @@ def isCredentialsValid():
 	return result
 
 def makeJWT():
-	userId = str(db.getUser(flask.request.get_json().get('username')).get('_id'))
+	userId = str(db.getObject('user', 'name', flask.request.get_json().get('username')).get('_id'))
 	expTime = str(datetime.datetime.now() + datetime.timedelta(seconds = 3600))
 	return jwt.encode({'userId': userId, 'expTime': expTime}, cfg.getJWTSecret(), algorithm = 'HS256')
 
@@ -75,13 +114,13 @@ def JWTUserInnerCheck(encryptedToken):
 
 	try:
 		decryptedToken = jwt.decode(encryptedToken, cfg.getJWTSecret(), algorithms=['HS256'])
-		# print(decryptedToken)
+		print(decryptedToken)
 		if isinstance(decryptedToken, dict):
 			expTime = decryptedToken.get('expTime')
 			userId = decryptedToken.get('userId')
 			if datetime.datetime.strptime(expTime, '%Y-%m-%d %H:%M:%S.%f') > datetime.datetime.now():
-				if db.isUserExists(bson.objectid.ObjectId(userId)):
-					result.update({'result': True, 'username': db.getUser(bson.objectid.ObjectId(userId)).get('name')})
+				if db.isObjectExists('user', 'oid', bson.objectid.ObjectId(userId)):
+					result.update({'result': True, 'username': db.getObject('user', 'oid', bson.objectid.ObjectId(userId)).get('name')})
 			else:
 				pass
 		else:
@@ -166,6 +205,21 @@ def checkJWT():
 def checkVP():
 		return makeResponse(200, {'result': 'VP is alive'})
 
+@app.route(apiVer + '/upload/xml', methods = ['POST'])
+def uploadXML():
+	# try:
+		if isJWTValid().get('result'):
+			# print('JWT returned')
+			# print(flask.request.files.getlist('file[]'))
+			xml = flask.request.data
+			rg = prepareXML(xml)
+			db.importFromKeePass(handleXML(rg))
+			# return makeResponse(200, {'_tt': makeJWT().decode()}) 
+		# else:
+		# 	return makeResponse(200, {'error': 'Are you shure?'})
+
+
+
 # @app.route('/')
 # def root():
 # 	if isJWTValid().get('result'):
@@ -180,19 +234,25 @@ def checkVP():
 # 	else:
 # 		return makeResponse(450, {'error': 'wrong JWT'})
 
-@app.route(apiVer + '/show/record/all')
-def getAllRecords():
-	if isJWTValid().get('result'):
-		# print(db.getAllRecords())
-		return makeResponse(200, {'records': db.getAllRecords()})
-	else:
-		return makeResponse(450, {'error': 'wrong JWT'})
-
+# @app.route(apiVer + '/show/record/all')
+# def getAllRecords():
+# 	if isJWTValid().get('result'):
+# 		# print(db.getAllRecords())
+# 		return makeResponse(200, {'records': db.getAllRecords()})
+# 	else:
+# 		return makeResponse(450, {'error': 'wrong JWT'})
 
 @app.route(apiVer + '/show/record/<recordId>')
 def getRecordById(recordId):
 	if isJWTValid().get('result'):
-		return makeResponse(200, db.getRecord(bson.objectid.ObjectId(recordId)))
+		return makeResponse(200, db.getObject('record', 'oid', bson.objectid.ObjectId(recordId)))
+	else:
+		return makeResponse(450, {'error': 'wrong JWT'})
+
+@app.route(apiVer + '/show/records/fromCatalog/<catalogId>')
+def getRecordsFromCatalog(catalogId):
+	if isJWTValid().get('result'):
+		return makeResponse(200, db.getRecordsFromCatalog(bson.objectid.ObjectId(catalogId)))
 	else:
 		return makeResponse(450, {'error': 'wrong JWT'})
 
@@ -257,7 +317,26 @@ def deleteRecord(recordId):
 	else:
 		return makeResponse(450, {'error': 'wrong JWT'})
 
+@app.route(apiVer + '/show/catalog/all')
+def getAllCatalogs():
+	if isJWTValid().get('result'):
+		return makeResponse(200, {'catalogs': db.getAllCatalogs()})
+	else:
+		return makeResponse(450, {'error': 'wrong JWT'})
 
+@app.route(apiVer + '/show/catalog/<catalogId>')
+def getCatalogById(catalogId):
+	if isJWTValid().get('result'):
+		return makeResponse(200, db.getObject('catalog', 'oid', bson.objectid.ObjectId(catalogId)))
+	else:
+		return makeResponse(450, {'error': 'wrong JWT'})
+
+@app.route(apiVer + '/show/catalog/byRecordId/<recordId>')
+def getCatalogByRecordId(recordId):
+	if isJWTValid().get('result'):
+		return makeResponse(200, db.getRecordCatalog(bson.objectid.ObjectId(recordId)))
+	else:
+		return makeResponse(450, {'error': 'wrong JWT'})
 
 
 # @app.route(apiVer + '/')
